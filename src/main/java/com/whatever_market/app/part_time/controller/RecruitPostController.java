@@ -6,6 +6,7 @@ import com.whatever_market.app.part_time.dto.RecruitPostRequestDTO;
 import com.whatever_market.app.part_time.dto.RecruitPostResponseDTO;
 import com.whatever_market.app.part_time.model.RecruitPost;
 import com.whatever_market.app.part_time.service.RecruitPostService;
+import com.whatever_market.app.part_time.dto.ReportRequestDto;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -55,6 +56,13 @@ public class RecruitPostController {
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteRecruitPost(@PathVariable Long id) {
         recruitPostService.deleteRecruitPostById(id);
+        return new ResponseEntity<>(HttpStatus.NO_CONTENT);
+    }
+
+    // 신고하기
+    @PostMapping("/report")
+    public ResponseEntity<Void> reportProduct(@RequestBody ReportRequestDto requestDto) {
+        recruitPostService.reportProduct(requestDto);
         return new ResponseEntity<>(HttpStatus.NO_CONTENT);
     }
 
