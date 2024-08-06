@@ -22,4 +22,11 @@ public class Product extends BaseModel {
 
     @Column(name = "description")
     private String description;
+
+    @Column(name = "view_count")
+    private int viewCount = 0;
+
+    public void addViewCount(){
+        this.viewCount++;
+    }
 }
