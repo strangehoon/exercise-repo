@@ -7,6 +7,8 @@ import com.whatever_market.app.product.dto.ProductResponseDTO;
 import com.whatever_market.app.product.dto.WishProductRequestDto;
 import com.whatever_market.app.product.model.Product;
 import com.whatever_market.app.product.service.ProductService;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -35,8 +37,9 @@ public class ProductController {
 
 
     @GetMapping("/{id}")
-    public ResponseEntity<ProductResponseDTO> getProduct(@PathVariable Long id) {
-        Product product = productService.getProductById(id);
+    public ResponseEntity<ProductResponseDTO> getProduct(@PathVariable Long id, HttpServletRequest request,
+                                                         HttpServletResponse response) {
+        Product product = productService.getProductById(id, request, response);
         ProductResponseDTO responseDTO = convertToResponseDTO(product);
         return new ResponseEntity<>(responseDTO, HttpStatus.OK);
     }

@@ -10,12 +10,20 @@ import com.whatever_market.app.product.service.ProductService;
 import com.whatever_market.app.bible.exception.NotFoundException;
 import com.whatever_market.app.user.model.User;
 import com.whatever_market.app.user.model.repository.UserRepository;
+import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -23,21 +31,53 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 @Slf4j
+@Transactional
 public class ProductServiceImpl implements ProductService {
     private final ProductRepository productRepository;
     private final UserRepository userRepository;
     private final WishListRepository wishListRepository;
 
     @Override
+    @Transactional(readOnly = true)
     public Page<Product> getAllProducts(Pageable pageable) {
         return productRepository.findAll(pageable);
     }
 
 
+    // API : 상품 상세 페이지 조회
+    // 쿠키를 기반으로 하루에 한번 조회수 증가
     @Override
-    public Product getProductById(Long id) {
-        return productRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException("Product not found"));
+    public Product getProductById(Long id, HttpServletRequest request, HttpServletResponse response) {
+        Product product = productRepository.findById(id).orElseThrow(
+                () -> new NotFoundException("Product not found")
+        );
+        Cookie[] cookies = request.getCookies();
+        Cookie cookie = null;
+        boolean isCookie = false;
+
+        for (int i = 0; cookies != null && i < cookies.length; i++) {
+            if (cookies[i].getName().equals("productView")) {
+                cookie = cookies[i];
+                if (!cookie.getValue().contains("[" + product.getId() + "]")) {
+                    product.addViewCount();
+                    cookie.setValue(cookie.getValue() + "[" + product.getId() + "]");
+                }
+                isCookie = true;
+                break;
+            }
+        }
+        if (!isCookie) {
+            product.addViewCount();
+            cookie = new Cookie("productView", "[" + product.getId() + "]"); // oldCookie에 새 쿠키 생성
+        }
+
+        // 쿠키 유지시간을 오늘 하루 자정까지로 설정
+        long todayEndSecond = LocalDate.now().atTime(LocalTime.MAX).toEpochSecond(ZoneOffset.UTC);
+        long currentSecond = LocalDateTime.now().toEpochSecond(ZoneOffset.UTC);
+        cookie.setPath("/");
+        cookie.setMaxAge((int) (todayEndSecond - currentSecond));
+        response.addCookie(cookie);
+        return product;
     }
 
     @Override
@@ -109,6 +149,7 @@ public class ProductServiceImpl implements ProductService {
 
     // API : 찜한 상품 목록들 조회
     @Override
+    @Transactional(readOnly = true)
     public Page<Product> getWishedProducts(Long userId, Pageable pageable) {
         List<WishList> wishListLists = wishListRepository.findAllByUserId(userId);
         List<Long> productIds = wishListLists.stream()
